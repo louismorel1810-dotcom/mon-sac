@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mon Sac">
+<meta name="theme-color" content="#f5f3ef">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Mon Sac</title>
+<style>
+  :root {
+    --bg: #f5f3ef; --card: #ffffff; --text: #1d1b18; --muted: #7a756c;
+    --line: #e6e2da; --accent: #2f6f4f; --accent-soft: #e3efe7; --danger: #b3412f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141413; --card: #1f1e1c; --text: #f1eee8; --muted: #9a958b;
+      --line: #2f2d2a; --accent: #6cc093; --accent-soft: #1f3328; --danger: #e0715f;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 17px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    padding: env(safe-area-inset-top) 16px calc(env(safe-area-inset-bottom) + 24px);
+  }
+  main { max-width: 520px; margin: 0 auto; }
+  header { padding: 20px 0 12px; }
+  h1 { font-size: 32px; margin: 0; letter-spacing: -0.5px; }
+  .sub { color: var(--muted); margin-top: 4px; font-size: 15px; }
+  .progress { height: 6px; background: var(--line); border-radius: 3px; margin-top: 14px; overflow: hidden; }
+  .progress > div { height: 100%; background: var(--accent); width: 0; transition: width .25s; }
+  .done-banner {
+    display: none; margin-top: 14px; padding: 12px 14px; border-radius: 12px;
+    background: var(--accent-soft); color: var(--accent); font-weight: 600;
+  }
+  .done-banner.show { display: block; }
+
+  section { background: var(--card); border-radius: 14px; margin-top: 18px; overflow: hidden; }
+  section h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted);
+    margin: 0; padding: 14px 16px 6px; font-weight: 600;
+  }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { display: flex; align-items: center; border-top: 1px solid var(--line); min-height: 52px; }
+  li:first-child { border-top: none; }
+  li label { flex: 1; display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; }
+  li input[type=checkbox] { display: none; }
+  .box {
+    width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); flex-shrink: 0;
+    display: grid; place-items: center; transition: all .15s;
+  }
+  input:checked + .box { background: var(--accent); border-color: var(--accent); }
+  input:checked + .box::after { content: ""; width: 6px; height: 11px; border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg) translate(-1px,-1px); }
+  input:checked ~ .name { color: var(--muted); text-decoration: line-through; }
+  .del {
+    border: none; background: none; color: var(--danger); font-size: 22px;
+    padding: 12px 16px; display: none; cursor: pointer;
+  }
+  body.editing .del { display: block; }
+  .empty { padding: 16px; color: var(--muted); }
+
+  form.add { display: flex; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid var(--line); }
+  input[type=text], input[type=time] {
+    flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+  }
+  button.btn {
+    font: inherit; font-weight: 600; border: none; border-radius: 10px; padding: 10px 14px;
+    background: var(--accent); color: #fff; cursor: pointer;
+  }
+  button.ghost { background: var(--accent-soft); color: var(--accent); }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: none; }
+  .row .label { flex: 1; }
+  .row small { display: block; color: var(--muted); font-size: 13px; }
+  .row input[type=time] { flex: 0 0 auto; width: 110px; }
+  .actions { display: flex; gap: 8px; margin-top: 18px; }
+  .actions button { flex: 1; }
+  .hint { color: var(--muted); font-size: 13px; padding: 0 16px 14px; }
+  .toast {
+    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 20px); transform: translateX(-50%);
+    background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 20px; font-size: 15px;
+    opacity: 0; transition: opacity .2s; pointer-events: none; max-width: calc(100% - 32px); text-align: center;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>🎒 Mon Sac</h1>
+    <div class="sub" id="sub"></div>
+    <div class="progress"><div id="bar"></div></div>
+    <div class="done-banner" id="banner">✅ Sac prêt, rien d'oublié !</div>
+  </header>
+
+  <section>
+    <h2>Checklist</h2>
+    <ul id="list"></ul>
+    <form class="add" id="addForm">
+      <input type="text" id="newItem" placeholder="Ajouter une affaire…" autocomplete="off" enterkeyhint="done">
+      <button class="btn" type="submit">Ajouter</button>
+    </form>
+  </section>
+
+  <div class="actions">
+    <button class="btn ghost" id="resetBtn">Tout décocher</button>
+    <button class="btn ghost" id="editBtn">Modifier</button>
+  </div>
+
+  <section>
+    <h2>Rappel du soir</h2>
+    <div class="row">
+      <div class="label">Heure du rappel<small>Tous les soirs</small></div>
+      <input type="time" id="time">
+    </div>
+    <div class="row">
+      <div class="label">Rappel dans Calendrier<small>Fiable, même app fermée</small></div>
+      <button class="btn" id="icsBtn">Installer</button>
+    </div>
+    <div class="row">
+      <div class="label">Notifications de l'app<small id="notifState"></small></div>
+      <button class="btn ghost" id="notifBtn">Activer</button>
+    </div>
+    <p class="hint">Sur iPhone, une web app ne peut pas programmer seule une notification quand elle est fermée. Le bouton « Installer » ajoute un rappel quotidien récurrent dans ton Calendrier, avec une alerte à l'heure choisie. Si tu changes l'heure, réinstalle-le (et supprime l'ancien).</p>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY = 'monsac-v1';
+const DEFAULT = {
+  items: ['Clés', 'Portefeuille', 'Téléphone', 'Chargeur', 'Écouteurs', 'Gourde', 'Ordinateur'],
+  checked: [],
+  checkedDay: null,
+  time: '20:00',
+  lastNotified: null
+};
+
+function load() {
+  try { return Object.assign({}, DEFAULT, JSON.parse(localStorage.getItem(KEY)) || {}); }
+  catch { return { ...DEFAULT }; }
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} }
+
+const state = load();
+const today = () => new Date().toISOString().slice(0, 10);
+const $ = id => document.getElementById(id);
+
+// Les coches repartent à zéro chaque jour
+if (state.checkedDay !== today()) { state.checked = []; state.checkedDay = today(); save(); }
+
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function render() {
+  const list = $('list');
+  list.innerHTML = '';
+  if (!state.items.length) list.innerHTML = '<li class="empty">Aucune affaire. Ajoute-en une ci-dessous.</li>';
+  state.items.forEach((name, i) => {
+    const li = document.createElement('li');
+    const checked = state.checked.includes(name);
+    li.innerHTML = `<label><input type="checkbox" ${checked ? 'checked' : ''}><span class="box"></span><span class="name"></span></label><button class="del" aria-label="Supprimer">⊖</button>`;
+    li.querySelector('.name').textContent = name;
+    li.querySelector('input').addEventListener('change', e => {
+      state.checked = e.target.checked ? [...state.checked, name] : state.checked.filter(n => n !== name);
+      state.checkedDay = today(); save(); renderProgress();
+    });
+    li.querySelector('.del').addEventListener('click', () => {
+      state.items.splice(i, 1);
+      state.checked = state.checked.filter(n => n !== name);
+      save(); render();
+    });
+    list.appendChild(li);
+  });
+  renderProgress();
+}
+
+function renderProgress() {
+  const total = state.items.length;
+  const done = state.items.filter(n => state.checked.includes(n)).length;
+  $('bar').style.width = total ? (done / total * 100) + '%' : '0';
+  $('sub').textContent = total ? `${done} / ${total} dans le sac · rappel à ${state.time.replace(':', 'h')}` : `Rappel à ${state.time.replace(':', 'h')}`;
+  $('banner').classList.toggle('show', total > 0 && done === total);
+}
+
+$('addForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = $('newItem').value.trim();
+  if (!v) return;
+  if (state.items.some(n => n.toLowerCase() === v.toLowerCase())) { toast('Déjà dans la liste'); return; }
+  state.items.push(v); $('newItem').value = ''; save(); render();
+});
+
+$('resetBtn').addEventListener('click', () => { state.checked = []; save(); render(); });
+$('editBtn').addEventListener('click', () => {
+  const on = document.body.classList.toggle('editing');
+  $('editBtn').textContent = on ? 'Terminé' : 'Modifier';
+});
+
+// ----- Heure du rappel -----
+$('time').value = state.time;
+$('time').addEventListener('change', e => {
+  state.time = e.target.value || '20:00'; save(); renderProgress();
+  toast(`Rappel réglé à ${state.time.replace(':', 'h')} — réinstalle-le dans Calendrier`);
+});
+
+// ----- Rappel Calendrier (.ics récurrent quotidien avec alerte) -----
+$('icsBtn').addEventListener('click', () => {
+  const [h, m] = state.time.split(':').map(Number);
+  const start = new Date(); start.setHours(h, m, 0, 0);
+  const end = new Date(start.getTime() + 10 * 60000);
+  const p = n => String(n).padStart(2, '0');
+  const fmt = d => `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}T${p(d.getHours())}${p(d.getMinutes())}00`;
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+  const url = location.href.split('#')[0];
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//MonSac//FR', 'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT',
+    `UID:monsac-${Date.now()}@monsac`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART:${fmt(start)}`,
+    `DTEND:${fmt(end)}`,
+    'RRULE:FREQ=DAILY',
+    'SUMMARY:🎒 Préparer mon sac',
+    `DESCRIPTION:Vérifie ta checklist : ${url}`,
+    `URL:${url}`,
+    'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Préparer mon sac', 'TRIGGER:PT0M', 'END:VALARM',
+    'END:VEVENT', 'END:VCALENDAR'
+  ].join('\r\n');
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'rappel-sac.ics';
+  document.body.appendChild(a); a.click(); a.remove();
+});
+
+// ----- Notifications de l'app (quand elle tourne / est en arrière-plan) -----
+function notifSupported() { return 'Notification' in window; }
+function renderNotif() {
+  if (!notifSupported()) {
+    $('notifState').textContent = "Ajoute l'app à l'écran d'accueil pour les activer";
+    $('notifBtn').disabled = true; return;
+  }
+  const p = Notification.permission;
+  $('notifState').textContent = p === 'granted' ? 'Activées (quand l\'app est ouverte)' : p === 'denied' ? 'Refusées dans Réglages' : 'Désactivées';
+  $('notifBtn').textContent = p === 'granted' ? 'Tester' : 'Activer';
+}
+$('notifBtn').addEventListener('click', async () => {
+  if (Notification.permission !== 'granted') await Notification.requestPermission();
+  renderNotif();
+  if (Notification.permission === 'granted') notify('Test : les notifications marchent 👍');
+});
+
+async function notify(body) {
+  const reg = 'serviceWorker' in navigator && await navigator.serviceWorker.getRegistration();
+  const missing = state.items.filter(n => !state.checked.includes(n));
+  const text = body || (missing.length ? `Pas encore dans le sac : ${missing.join(', ')}` : 'Tout est prêt ✅');
+  if (reg) reg.showNotification('🎒 Prépare ton sac', { body: text, icon: 'icon-192.png', tag: 'monsac' });
+  else new Notification('🎒 Prépare ton sac', { body: text });
+}
+
+function checkReminder() {
+  const now = new Date();
+  const [h, m] = state.time.split(':').map(Number);
+  const due = now.getHours() > h || (now.getHours() === h && now.getMinutes() >= m);
+  if (due && state.lastNotified !== today() && notifSupported() && Notification.permission === 'granted') {
+    state.lastNotified = today(); save(); notify();
+  }
+  if (state.checkedDay !== today()) { state.checked = []; state.checkedDay = today(); save(); render(); }
+}
+setInterval(checkReminder, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkReminder(); });
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+render(); renderNotif();
+</script>
+</body>
+</html>
